@@ -38,7 +38,8 @@ our $status_presence = $PRES_ZUHAUSE;
 Readonly our $LICHT_STD_AUS =>  'Licht_std_aus';    # ->LICHT_MAN_AN, ->LICHT_BEW_AN, ->LICHT_ZEIT_AN
 Readonly our $LICHT_MAN_AN  =>  'Licht_man_an';     # ->LICHT_MAN_AUS, ->LICHT_ZEIT_AN, ->LICHT_STD_AUS
 Readonly our $LICHT_MAN_AUS =>  'Licht_man_aus';    # ->LICHT_STD_AUS, ->LICHT_MAN_AN
-Readonly our $LICHT_BEW_AN  =>  'Licht_bew_an';     # ->LICHT_STD_AUS, ->LICHT_MAN_AUS, ->LICHT_ZEIT_AN
+Readonly our $LICHT_BEW_AN  =>  'Licht_bew_an';     # ->LICHT_BEW_AUS, ->LICHT_MAN_AUS, ->LICHT_ZEIT_AN
+Readonly our $LICHT_BEW_AUS =>  'Licht_bew_aus';    # ->LICHT_STD_AUS, ->LICHT_MAN_AUS, ->LICHT_ZEIT_AN
 Readonly our $LICHT_ZEIT_AN =>  'Licht_zeit_an';    # ->LICHT_STD_AUS, ->LICHT_MAN_AUS
 
 ##############################################
@@ -60,6 +61,16 @@ set_fl_decke_off
     fhem("set FL_Decke_RGB off");
 }
 
+set_fl_decke_nomotion_timer
+{
+    fhem ("defmod FL_nomotiontimer at +00:00:20 { set_state_fl_std_aus(); }");
+}
+
+reset_fl_decke_nomotion_timer
+{
+    fhem ("delete FL_nomotiontimer");
+}
+
 # states
 our $status_fl_licht = $LICHT_STD_AUS;
 
@@ -75,6 +86,7 @@ sub set_state_fl_man_an
     set_fl_decke_on();
     # TODO set a man_on timer to go to argument function
     #https://stackoverflow.com/questions/1234640/passing-a-function-object-and-calling-it
+    # This shall save the manual setting for a time until it returns to the state which is provided by the argument.
 }
 
 sub set_state_fl_man_aus
@@ -83,6 +95,7 @@ sub set_state_fl_man_aus
     set_fl_decke_off();
     # TODO set a man_off timer to go to argument function
     #https://stackoverflow.com/questions/1234640/passing-a-function-object-and-calling-it
+    # This shall save the manual setting for a time until it returns to the state which is provided by the argument.
 }
 
 sub set_state_fl_bew_an
@@ -93,6 +106,13 @@ sub set_state_fl_bew_an
     } else {
         set_fl_decke_on();
     }
+}
+
+# starts timer to switch light off
+sub set_state_fl_bew_aus
+{
+    $status_fl_licht = $LICHT_BEW_AUS;
+    set_fl_decke_nomotion_timer();
 }
 
 sub set_state_fl_zeit_an
@@ -107,13 +127,21 @@ sub set_state_fl_zeit_an
 sub action_fl_lightswitch
 {
     if(     $LICHT_MAN_AN == $status_fl_licht ||
-            $LICHT_BEW_AN == $status_fl_licht ) {
+            $LICHT_BEW_AN == $status_fl_licht )
+    {
         set_state_fl_man_aus();
         # TODO set argument to afterwards go $LICHT_STD_AUS
     }
-    elsif(  $LICHT_ZEIT_AN == $status_fl_licht ) {
+    elsif(  $LICHT_ZEIT_AN == $status_fl_licht )
+    {
         set_state_fl_man_aus();
         # TODO set argument to afterwards go $LICHT_ZEIT_AN
+    }
+    elsif(  $LICHT_BEW_AUS == $status_fl_licht )
+    {
+        set_state_fl_man_aus();
+        # TODO set argument to afterwards go $LICHT_STD_AUS
+        reset_fl_decke_nomotion_timer();
     }
     else { # LICHT_STD_AUS & LICHT_MAN_AUS
         set_state_fl_man_an();
@@ -121,7 +149,51 @@ sub action_fl_lightswitch
     }
 }
 
+# Bewegung erkannt
 sub action_fl_motion_on
+{
+    if(     $LICHT_STD_AUS == $status_fl_licht )
+    {
+        set_state_fl_bew_an();
+    }
+    elsif(  $LICHT_BEW_AUS == $status_fl_licht)
+    {
+        reset_fl_decke_nomotion_timer();
+        set_state_fl_bew_an();
+    }
+    else { }
+    # $LICHT_MAN_AN
+    # nothing
+    # $LICHT_MAN_AUS
+    # nothing
+    # $LICHT_BEW_AN
+    # nothing
+    # $LICHT_ZEIT_AN
+    # nothing
+}
+
+# TODO
+sub action_fl_motion_off
+{
+    if(     $LICHT_BEW_AN == $status_fl_licht )
+    {
+        set_state_fl_bew_aus();
+    }
+    else { }
+    # $LICHT_STD_AUS
+    # nothing
+    # $LICHT_MAN_AN
+    # nothing
+    # $LICHT_MAN_AUS
+    # nothing
+    # $LICHT_BEW_AUS
+    # nothing
+    # $LICHT_ZEIT_AN
+    # nothing
+}
+
+# TODO
+sub action_fl_timer_on
 {
     if(     $LICHT_STD_AUS == $status_fl_licht )
     {
@@ -134,48 +206,16 @@ sub action_fl_motion_on
     # nothing
     # $LICHT_BEW_AN
     # nothing
-    # $LICHT_ZEIT_AN
-    # nothing
-}
-
-sub action_fl_motion_off
-{
-    fhem ("");
-    if(     $LICHT_BEW_AN == $status_fl_licht )
-    {
-        fhem ("defmod FL_nomotiontimer at +00:00:20 { set_state_fl_std_aus(); }");
-    }
-    else { }
-    # $LICHT_STD_AUS
-    # nothing
-    # $LICHT_MAN_AN
-    # nothing
-    # $LICHT_MAN_AUS
+    # $LICHT_BEW_AUS
     # nothing
     # $LICHT_ZEIT_AN
     # nothing
 }
 
-sub action_fl_timer_on
-{
-    if( LICHT_STD_AUS == $status_fl_licht )
-    {
-        set_state_fl_bew_an();
-    }
-    else { }
-    # $LICHT_MAN_AN
-    # nothing
-    # $LICHT_MAN_AUS
-    # nothing
-    # $LICHT_BEW_AN
-    # nothing
-    # $LICHT_ZEIT_AN
-    # nothing
-}
-
+# TODO
 sub action_fl_timer_off
 {
-    if( LICHT_STD_AUS == $status_fl_licht )
+    if(     $LICHT_STD_AUS == $status_fl_licht )
     {
         set_state_fl_bew_an();
     }
@@ -185,6 +225,8 @@ sub action_fl_timer_off
     # $LICHT_MAN_AUS
     # nothing
     # $LICHT_BEW_AN
+    # nothing
+    # $LICHT_BEW_AUS
     # nothing
     # $LICHT_ZEIT_AN
     # nothing
