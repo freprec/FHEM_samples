@@ -18,7 +18,7 @@ use Readonly
 sub
 myUtils_Initialize($$)
 {
-  my ($hash) = @_;
+    my ($hash) = @_;
 }
 
 # Enter you functions below _this_ line.
@@ -33,10 +33,10 @@ use Time::Piece;
 # ALLGEMEIN
 
 # Präsenzzustände
-Readonly our $PRES_ZUHAUSE  =>  'Pres_zuhause';
-Readonly our $PRES_SCHLAF   =>  'Pres_schlaf';
-Readonly our $PRES_WEG      =>  'Pres_weg';
-Readonly our $PRES_URLAUB   =>  'Pres_urlaub';
+Readonly our $PRES_ZUHAUSE  =>  3;
+Readonly our $PRES_SCHLAF   =>  2;
+Readonly our $PRES_WEG      =>  1;
+Readonly our $PRES_URLAUB   =>  0;
 
 our $status_presence = $PRES_ZUHAUSE;
 
@@ -48,41 +48,37 @@ Readonly our $LICHT_BEW_AN  =>  'Licht_bew_an';     # ->LICHT_BEW_AUS, ->LICHT_M
 Readonly our $LICHT_BEW_AUS =>  'Licht_bew_aus';    # ->LICHT_STD_AUS, ->LICHT_MAN_AUS, ->LICHT_ZEIT_AN
 Readonly our $LICHT_ZEIT_AN =>  'Licht_zeit_an';    # ->LICHT_STD_AUS, ->LICHT_MAN_AUS
 
+our $simulated_bed_time;
+our $simulated_work_time;
+
 # Einmal nachts ausführen
 sub execute_once_per_night
 {
     set_simulated_bed_time();
+    set_timers($simulated_bed_time, $simulated_work_time);
+
+    1;
 }
 
 # Anwesenheitssimulation
-our $simulated_bed_time;
-
 sub set_simulated_bed_time
 {
     my $time = Time::Piece->new;    # jetzt
     my $date = $time->date;         # heute
-    my $earliest_bed_time = "23:30";
-    my $random_range = 90;
-    $earliest_bed_time = Time::Piece->strptime("$date $earliest_bed_time", "%Y-%m-%d %H:%M");
 
-    my $rnd_secs1 = int(rand(($random_range/2)*60));
-    my $rnd_secs2 = int(rand(($random_range/2)*60));
-    # Zufallsverteilung mit Schwerpunkt 45 Minuten
-    $simulated_bed_time = $earliest_bed_time + ($rnd_secs1 + $rnd_secs2);
-    my $simulated_work_time = $simulated_bed_time - (60*60);
+    my $earliest_bed_time_piece = Time::Piece->strptime("$date $main::EARLIEST_BED_TIME_HH_MM", "%Y-%m-%d %H:%M");
 
+    my $rnd_secs1 = int(rand(($main::RANDOM_RANGE_M/2)*60));
+    my $rnd_secs2 = int(rand(($main::RANDOM_RANGE_M/2)*60));
+    # Zufallsverteilung mit mittigem Schwerpunkt
+    $simulated_bed_time = $earliest_bed_time_piece + ($rnd_secs1 + $rnd_secs2);
+    $simulated_work_time = $simulated_bed_time - ($main::WORK_END_BEFORE_SLEEP_M*60);
+
+    # Convert to "HH:MM" format
     $simulated_bed_time = $simulated_bed_time->strftime('%T');
     $simulated_work_time = $simulated_work_time->strftime('%T');
 
-    fhem("defmod Abends_Flurlicht RandomTimer *{sunset_abs('HORIZON=10.5',0)} FL_Decke_RGB ".$simulated_bed_time." 45");
-    fhem("defmod Abends_Arbeitszimmerlicht RandomTimer *{sunset_abs('HORIZON=9.5',0)} AZ_Deckenlampe ".$simulated_work_time." 113");
-    
-    return $simulated_bed_time;
-}
-
-sub get_simulated_bed_time
-{
-    return $simulated_bed_time;
+    1;
 }
 
 ##############################################
