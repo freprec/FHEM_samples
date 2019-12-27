@@ -24,6 +24,12 @@ myUtils_Initialize($$)
 # Enter you functions below _this_ line.
 
 ##############################################
+# Use
+
+use Time::Piece;
+#use Time::Seconds;
+
+##############################################
 # ALLGEMEIN
 
 # Präsenzzustände
@@ -42,33 +48,70 @@ Readonly our $LICHT_BEW_AN  =>  'Licht_bew_an';     # ->LICHT_BEW_AUS, ->LICHT_M
 Readonly our $LICHT_BEW_AUS =>  'Licht_bew_aus';    # ->LICHT_STD_AUS, ->LICHT_MAN_AUS, ->LICHT_ZEIT_AN
 Readonly our $LICHT_ZEIT_AN =>  'Licht_zeit_an';    # ->LICHT_STD_AUS, ->LICHT_MAN_AUS
 
+# Einmal nachts ausführen
+sub execute_once_per_night
+{
+    set_simulated_bed_time();
+}
+
+# Anwesenheitssimulation
+our $simulated_bed_time;
+
+sub set_simulated_bed_time
+{
+    my $time = Time::Piece->new;    # jetzt
+    my $date = $time->date;         # heute
+    my $earliest_bed_time = "23:30";
+    my $random_range = 90;
+    $earliest_bed_time = Time::Piece->strptime("$date $earliest_bed_time", "%Y-%m-%d %H:%M");
+
+    my $rnd_secs1 = int(rand(($random_range/2)*60));
+    my $rnd_secs2 = int(rand(($random_range/2)*60));
+    # Zufallsverteilung mit Schwerpunkt 45 Minuten
+    $simulated_bed_time = $earliest_bed_time + ($rnd_secs1 + $rnd_secs2);
+    my $simulated_work_time = $simulated_bed_time - (60*60);
+
+    $simulated_bed_time = $simulated_bed_time->strftime('%T');
+    $simulated_work_time = $simulated_work_time->strftime('%T');
+
+    fhem("defmod Abends_Flurlicht RandomTimer *{sunset_abs('HORIZON=10.5',0)} FL_Decke_RGB ".$simulated_bed_time." 45");
+    fhem("defmod Abends_Arbeitszimmerlicht RandomTimer *{sunset_abs('HORIZON=9.5',0)} AZ_Deckenlampe ".$simulated_work_time." 113");
+    
+    return $simulated_bed_time;
+}
+
+sub get_simulated_bed_time
+{
+    return $simulated_bed_time;
+}
+
 ##############################################
 # FLUR
 
 # set fl_decke
-set_fl_decke_on
+sub set_fl_decke_on
 {
     fhem("set FL_Decke_RGB ct 360; set FL_Decke_RGB pct 100");
 }
 
-set_fl_decke_night
+sub set_fl_decke_night
 {
     fhem("set FL_Decke_RGB rgb 1D0505");
 }
 
-set_fl_decke_off
+sub set_fl_decke_off
 {
     fhem("set FL_Decke_RGB off");
 }
 
-set_fl_decke_nomotion_timer
+sub set_fl_decke_nomotion_timer
 {
-    fhem ("defmod FL_nomotiontimer at +00:00:20 { set_state_fl_std_aus(); }");
+    fhem("defmod FL_nomotiontimer at +00:00:20 { set_state_fl_std_aus(); }");
 }
 
-reset_fl_decke_nomotion_timer
+sub reset_fl_decke_nomotion_timer
 {
-    fhem ("delete FL_nomotiontimer");
+    fhem("delete FL_nomotiontimer");
 }
 
 # states
