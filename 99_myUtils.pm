@@ -191,6 +191,7 @@ sub action_fl_lightswitch
 # Bewegung erkannt
 sub action_fl_motion_on
 {
+    # fl_licht
     if(     $LICHT_STD_AUS == $status_fl_licht )
     {
         set_state_fl_bew_an();
@@ -209,6 +210,18 @@ sub action_fl_motion_on
     # nothing
     # $LICHT_ZEIT_AN
     # nothing
+    
+    # bz_strip
+    if(     $LICHT_STD_AUS == $status_bz_strip )
+    {
+        set_state_bz_strip_bew_an();
+    }
+    elsif(  $LICHT_BEW_AUS == $status_bz_strip)
+    {
+        reset_bz_strip_nomotion_timer();
+        set_state_bz_strip_bew_an();
+    }
+    else { }
 }
 
 # TODO
@@ -270,5 +283,56 @@ sub action_fl_timer_off
     # $LICHT_ZEIT_AN
     # nothing
 }
+
+
+##############################################
+# BADEZIMMER
+
+# set bz_strip
+sub set_bz_strip_night
+{
+    fhem("set BZ_Flexstrip rgb 1D0505");
+}
+
+sub set_bz_strip_nomotion_timer
+{
+    fhem("defmod FL_BZStrip_nomotiontimer at +00:05:00 { set_state_bz_strip_std_aus(); }");
+}
+
+sub reset_bz_strip_nomotion_timer
+{
+    fhem("delete FL_BZStrip_nomotiontimer");
+}
+
+sub set_bz_strip_off
+{
+    fhem("set BZ_Flexstrip off");
+}
+
+# states
+our $status_bz_strip = $LICHT_STD_AUS;
+
+sub set_state_bz_strip_std_aus
+{
+    $status_bz_strip = $LICHT_STD_AUS;
+    set_bz_strip_off();
+}
+
+sub set_state_bz_strip_bew_an
+{
+    $status_bz_strip = $LICHT_BEW_AN;
+    if( $PRES_SCHLAF == $status_presence ) {
+        set_bz_strip_night();
+    } else {
+    }
+}
+
+# starts timer to switch light off
+sub set_state_bz_strip_bew_aus
+{
+    $status_bz_strip = $LICHT_BEW_AUS;
+    set_bz_strip_nomotion_timer();
+}
+
 
 1;
