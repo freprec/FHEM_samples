@@ -1,5 +1,5 @@
 ##############################################
-# $Id: 99_myUtils.pm 2019-10-25
+# $Id: 99_myUtils.pm 2020-07-02
 #
 #  myUtilsTemplate.pm 7570 2015-01-14 18:31:44Z rudolfkoenig $
 #
@@ -13,12 +13,32 @@ package main;
 use strict;
 use warnings;
 use POSIX;
-use Readonly
 
 sub
 myUtils_Initialize($$)
 {
     my ($hash) = @_;
+    # Präsenzzustände
+    our $PRES_ZUHAUSE  =  3;
+    our $PRES_SCHLAF   =  2;
+    our $PRES_WEG      =  1;
+    our $PRES_URLAUB   =  0;
+
+    our $status_presence = $PRES_ZUHAUSE;
+
+    # Lichtzustände                                     # Zustandsübergänge
+    our $LICHT_STD_AUS =  'Licht_std_aus';    # ->LICHT_MAN_AN, ->LICHT_BEW_AN, ->LICHT_ZEIT_AN
+    our $LICHT_MAN_AN  =  'Licht_man_an';     # ->LICHT_MAN_AUS, ->LICHT_ZEIT_AN, ->LICHT_STD_AUS
+    our $LICHT_MAN_AUS =  'Licht_man_aus';    # ->LICHT_STD_AUS, ->LICHT_MAN_AN
+    our $LICHT_BEW_AN  =  'Licht_bew_an';     # ->LICHT_BEW_AUS, ->LICHT_MAN_AUS, ->LICHT_ZEIT_AN
+    our $LICHT_BEW_AUS =  'Licht_bew_aus';    # ->LICHT_STD_AUS, ->LICHT_MAN_AUS, ->LICHT_ZEIT_AN
+    our $LICHT_ZEIT_AN =  'Licht_zeit_an';    # ->LICHT_STD_AUS, ->LICHT_MAN_AUS
+
+    our $simulated_bed_time;
+    our $simulated_work_time;
+
+    our $status_bz_strip = $LICHT_STD_AUS;
+    our $status_fl_licht = $LICHT_STD_AUS;
 }
 
 # Enter you functions below _this_ line.
@@ -32,30 +52,11 @@ use Time::Piece;
 ##############################################
 # ALLGEMEIN
 
-# Präsenzzustände
-Readonly our $PRES_ZUHAUSE  =>  3;
-Readonly our $PRES_SCHLAF   =>  2;
-Readonly our $PRES_WEG      =>  1;
-Readonly our $PRES_URLAUB   =>  0;
-
-our $status_presence = $PRES_ZUHAUSE;
-
-# Lichtzustände                                     # Zustandsübergänge
-Readonly our $LICHT_STD_AUS =>  'Licht_std_aus';    # ->LICHT_MAN_AN, ->LICHT_BEW_AN, ->LICHT_ZEIT_AN
-Readonly our $LICHT_MAN_AN  =>  'Licht_man_an';     # ->LICHT_MAN_AUS, ->LICHT_ZEIT_AN, ->LICHT_STD_AUS
-Readonly our $LICHT_MAN_AUS =>  'Licht_man_aus';    # ->LICHT_STD_AUS, ->LICHT_MAN_AN
-Readonly our $LICHT_BEW_AN  =>  'Licht_bew_an';     # ->LICHT_BEW_AUS, ->LICHT_MAN_AUS, ->LICHT_ZEIT_AN
-Readonly our $LICHT_BEW_AUS =>  'Licht_bew_aus';    # ->LICHT_STD_AUS, ->LICHT_MAN_AUS, ->LICHT_ZEIT_AN
-Readonly our $LICHT_ZEIT_AN =>  'Licht_zeit_an';    # ->LICHT_STD_AUS, ->LICHT_MAN_AUS
-
-our $simulated_bed_time;
-our $simulated_work_time;
-
 # Einmal nachts ausführen
 sub execute_once_per_night
 {
     set_simulated_bed_time();
-    set_timers($simulated_bed_time, $simulated_work_time);
+    set_timers($main::simulated_bed_time, $main::simulated_work_time);
 
     1;
 }
@@ -71,13 +72,96 @@ sub set_simulated_bed_time
     my $rnd_secs1 = int(rand(($main::RANDOM_RANGE_M/2)*60));
     my $rnd_secs2 = int(rand(($main::RANDOM_RANGE_M/2)*60));
     # Zufallsverteilung mit mittigem Schwerpunkt
-    $simulated_bed_time = $earliest_bed_time_piece + ($rnd_secs1 + $rnd_secs2);
-    $simulated_work_time = $simulated_bed_time - ($main::WORK_END_BEFORE_SLEEP_M*60);
+    $main::simulated_bed_time = $earliest_bed_time_piece + ($rnd_secs1 + $rnd_secs2);
+    $main::simulated_work_time = $main::simulated_bed_time - ($main::WORK_END_BEFORE_SLEEP_M*60);
 
     # Convert to "HH:MM" format
-    $simulated_bed_time = $simulated_bed_time->strftime('%T');
-    $simulated_work_time = $simulated_work_time->strftime('%T');
+    $main::simulated_bed_time = $main::simulated_bed_time->strftime('%T');
+    $main::simulated_work_time = $main::simulated_work_time->strftime('%T');
 
+    1;
+}
+
+##############################################
+# ALLGEMEIN
+
+# states presence
+sub set_state_presence_zuhause()
+{
+    $main::status_presence = $main::PRES_ZUHAUSE;
+    
+    fhem("set FL_Decke_RGB rgb 1DFF0D");
+    fhem("set FL_Decke_RGB blink 2 0.9");
+    fhem("attr Abends_Flurlicht disable 1");
+    fhem("attr Abends_Arbeitszimmerlicht disable 1");
+    fhem("set teleBot message Anwesenheit: aktiviert");
+
+    1;
+}
+
+sub set_state_presence_schlaf()
+{
+    $main::status_presence = $main::PRES_SCHLAF;
+    
+    1;
+}
+
+sub set_state_presence_weg()
+{
+    $main::status_presence = $main::PRES_WEG;
+    
+    fhem("set FL_Decke_RGB rgb FF0808");
+    fhem("set FL_Decke_RGB blink 2 0.9");
+    fhem("attr Abends_Flurlicht disable 0");
+    fhem("attr Abends_Arbeitszimmerlicht disable 0");
+    fhem("set teleBot message Anwesenheit: deaktiviert");
+
+    1;
+}
+
+sub set_state_presence_urlaub()
+{
+    $main::status_presence = $main::PRES_URLAUB;
+    
+    1;
+}
+
+# actions presence
+sub action_presence_switch()
+{
+    if (         $main::PRES_WEG eq $main::status_presence ||
+              $main::PRES_SCHLAF eq $main::status_presence)
+    {
+        set_state_presence_zuhause();
+    }
+    elsif (  $main::PRES_ZUHAUSE eq $main::status_presence )
+    {
+        set_state_presence_weg();
+    }
+    else{}
+
+    1;
+}
+
+sub action_sleep_trigger()
+{
+    if (  $main::PRES_ZUHAUSE eq $main::status_presence )
+    {
+        set_state_presence_schlaf();
+    }
+    else{}
+
+    1;
+}
+
+sub action_wake_trigger()
+{
+    if (  $main::PRES_SCHLAF eq $main::status_presence )
+    {
+        set_state_presence_zuhause();
+    }
+    else{}
+    
     1;
 }
 
@@ -88,76 +172,92 @@ sub set_simulated_bed_time
 sub set_fl_decke_on
 {
     fhem("set FL_Decke_RGB ct 360; set FL_Decke_RGB pct 100");
+    1;
 }
 
 sub set_fl_decke_night
 {
     fhem("set FL_Decke_RGB rgb 1D0505");
+    1;
 }
 
 sub set_fl_decke_off
 {
     fhem("set FL_Decke_RGB off");
+    1;
 }
 
 sub set_fl_decke_nomotion_timer
 {
-    fhem("defmod FL_nomotiontimer at +00:00:20 { set_state_fl_std_aus(); }");
+    fhem("defmod FL_nomotiontimer at +00:00:20 { set_state_fl_std_aus() };");
+    1;
 }
 
 sub reset_fl_decke_nomotion_timer
 {
     fhem("delete FL_nomotiontimer");
+    1;
 }
 
 # states
-our $status_fl_licht = $LICHT_STD_AUS;
-
 sub set_state_fl_std_aus
 {
-    $status_fl_licht = $LICHT_STD_AUS;
+    $main::status_fl_licht = $main::LICHT_STD_AUS;
+    fhem("set teleBot message status_fl_licht: ".$main::status_fl_licht."");
     set_fl_decke_off();
+    1;
 }
 
 sub set_state_fl_man_an
 {
-    $status_fl_licht = $LICHT_MAN_AN;
+    $main::status_fl_licht = $main::LICHT_MAN_AN;
+    fhem("set teleBot message status_fl_licht: ".$main::status_fl_licht."");
     set_fl_decke_on();
     # TODO set a man_on timer to go to argument function
     #https://stackoverflow.com/questions/1234640/passing-a-function-object-and-calling-it
     # This shall save the manual setting for a time until it returns to the state which is provided by the argument.
+    1;
 }
 
 sub set_state_fl_man_aus
 {
-    $status_fl_licht = $LICHT_MAN_AUS;
+    set_state_fl_std_aus(); # until below TODO is implemented
+    #$main::status_fl_licht = $main::LICHT_MAN_AUS;
+    fhem("set teleBot message status_fl_licht: ".$main::status_fl_licht."");
     set_fl_decke_off();
     # TODO set a man_off timer to go to argument function
     #https://stackoverflow.com/questions/1234640/passing-a-function-object-and-calling-it
     # This shall save the manual setting for a time until it returns to the state which is provided by the argument.
+    1;
 }
 
 sub set_state_fl_bew_an
 {
-    $status_fl_licht = $LICHT_BEW_AN;
-    if( $PRES_SCHLAF == $status_presence ) {
+    $main::status_fl_licht = $main::LICHT_BEW_AN;
+    fhem("set teleBot message status_fl_licht: ".$main::status_fl_licht."");
+    if( $main::PRES_SCHLAF eq $main::status_presence ) {
         set_fl_decke_night();
     } else {
         set_fl_decke_on();
     }
+    1;
 }
 
 # starts timer to switch light off
 sub set_state_fl_bew_aus
 {
-    $status_fl_licht = $LICHT_BEW_AUS;
+    $main::status_fl_licht = $main::LICHT_BEW_AUS;
+    fhem("set teleBot message status_fl_licht: ".$main::status_fl_licht."");
     set_fl_decke_nomotion_timer();
+    1;
 }
 
 sub set_state_fl_zeit_an
 {
-    $status_fl_licht = $LICHT_ZEIT_AN;
+    $main::status_fl_licht = $main::LICHT_ZEIT_AN;
+    fhem("set teleBot message status_fl_licht: ".$main::status_fl_licht."");
     set_fl_decke_on();
+    1;
 }
 
 # Actions
@@ -165,123 +265,139 @@ sub set_state_fl_zeit_an
 # Lichtschalter betätigt
 sub action_fl_lightswitch
 {
-    if(     $LICHT_MAN_AN == $status_fl_licht ||
-            $LICHT_BEW_AN == $status_fl_licht )
+    if(     $main::LICHT_MAN_AN eq $main::status_fl_licht ||
+            $main::LICHT_BEW_AN eq $main::status_fl_licht )
     {
         set_state_fl_man_aus();
-        # TODO set argument to afterwards go $LICHT_STD_AUS
+        # TODO set argument to afterwards go $main::LICHT_STD_AUS
     }
-    elsif(  $LICHT_ZEIT_AN == $status_fl_licht )
+    elsif(  $main::LICHT_ZEIT_AN eq $main::status_fl_licht )
     {
         set_state_fl_man_aus();
-        # TODO set argument to afterwards go $LICHT_ZEIT_AN
+        # TODO set argument to afterwards go $main::LICHT_ZEIT_AN
     }
-    elsif(  $LICHT_BEW_AUS == $status_fl_licht )
+    elsif(  $main::LICHT_BEW_AUS eq $main::status_fl_licht )
     {
         set_state_fl_man_aus();
-        # TODO set argument to afterwards go $LICHT_STD_AUS
+        # TODO set argument to afterwards go $main::LICHT_STD_AUS
         reset_fl_decke_nomotion_timer();
     }
     else { # LICHT_STD_AUS & LICHT_MAN_AUS
         set_state_fl_man_an();
-        # TODO set argument to afterwards go $LICHT_STD_AUS
+        # TODO set argument to afterwards go $main::LICHT_STD_AUS
     }
+    1;
 }
 
 # Bewegung erkannt
 sub action_fl_motion_on
 {
+    if (   $main::PRES_WEG eq $main::status_presence ||
+        $main::PRES_URLAUB eq $main::status_presence)
+    {
+        fhem("set teleBot message Flur: Bewegung detektiert.");
+    }
+
     # fl_licht
-    if(     $LICHT_STD_AUS == $status_fl_licht )
+    if(     $main::LICHT_STD_AUS eq $main::status_fl_licht )
     {
         set_state_fl_bew_an();
     }
-    elsif(  $LICHT_BEW_AUS == $status_fl_licht)
+    elsif(  $main::LICHT_BEW_AUS eq $main::status_fl_licht)
     {
         reset_fl_decke_nomotion_timer();
         set_state_fl_bew_an();
     }
     else { }
-    # $LICHT_MAN_AN
+    # $main::LICHT_MAN_AN
     # nothing
-    # $LICHT_MAN_AUS
+    # $main::LICHT_MAN_AUS
     # nothing
-    # $LICHT_BEW_AN
+    # $main::LICHT_BEW_AN
     # nothing
-    # $LICHT_ZEIT_AN
+    # $main::LICHT_ZEIT_AN
     # nothing
     
     # bz_strip
-    if(     $LICHT_STD_AUS == $status_bz_strip )
+    if(     $main::LICHT_STD_AUS eq $main::status_bz_strip )
     {
         set_state_bz_strip_bew_an();
     }
-    elsif(  $LICHT_BEW_AUS == $status_bz_strip)
+    elsif(  $main::LICHT_BEW_AUS eq $main::status_bz_strip)
     {
         reset_bz_strip_nomotion_timer();
         set_state_bz_strip_bew_an();
     }
     else { }
+    1;
 }
 
 # TODO
 sub action_fl_motion_off
 {
-    if(     $LICHT_BEW_AN == $status_fl_licht )
+    if(     $main::LICHT_BEW_AN eq $main::status_fl_licht )
     {
         set_state_fl_bew_aus();
     }
     else { }
-    # $LICHT_STD_AUS
+    # $main::LICHT_STD_AUS
     # nothing
-    # $LICHT_MAN_AN
+    # $main::LICHT_MAN_AN
     # nothing
-    # $LICHT_MAN_AUS
+    # $main::LICHT_MAN_AUS
     # nothing
-    # $LICHT_BEW_AUS
+    # $main::LICHT_BEW_AUS
     # nothing
-    # $LICHT_ZEIT_AN
+    # $main::LICHT_ZEIT_AN
     # nothing
+
+    if(     $main::LICHT_BEW_AN eq $main::status_bz_strip )
+    {
+        set_state_bz_strip_bew_aus();
+    }
+    1;
 }
 
 # TODO
 sub action_fl_timer_on
 {
-    if(     $LICHT_STD_AUS == $status_fl_licht )
+    if(     $main::LICHT_STD_AUS eq $main::status_fl_licht )
     {
         set_state_fl_bew_an();
     }
     else { }
-    # $LICHT_MAN_AN
+    # $main::LICHT_MAN_AN
     # nothing
-    # $LICHT_MAN_AUS
+    # $main::LICHT_MAN_AUS
     # nothing
-    # $LICHT_BEW_AN
+    # $main::LICHT_BEW_AN
     # nothing
-    # $LICHT_BEW_AUS
+    # $main::LICHT_BEW_AUS
     # nothing
-    # $LICHT_ZEIT_AN
+    # $main::LICHT_ZEIT_AN
     # nothing
+    1;
 }
 
 # TODO
 sub action_fl_timer_off
 {
-    if(     $LICHT_STD_AUS == $status_fl_licht )
+    if(     $main::LICHT_STD_AUS eq $main::status_fl_licht )
     {
         set_state_fl_bew_an();
     }
     else { }
-    # $LICHT_MAN_AN
+    # $main::LICHT_MAN_AN
     # nothing
-    # $LICHT_MAN_AUS
+    # $main::LICHT_MAN_AUS
     # nothing
-    # $LICHT_BEW_AN
+    # $main::LICHT_BEW_AN
     # nothing
-    # $LICHT_BEW_AUS
+    # $main::LICHT_BEW_AUS
     # nothing
-    # $LICHT_ZEIT_AN
+    # $main::LICHT_ZEIT_AN
     # nothing
+    1;
 }
 
 
@@ -292,46 +408,56 @@ sub action_fl_timer_off
 sub set_bz_strip_night
 {
     fhem("set BZ_Flexstrip rgb 1D0505");
+    1;
 }
 
 sub set_bz_strip_nomotion_timer
 {
-    fhem("defmod FL_BZStrip_nomotiontimer at +00:05:00 { set_state_bz_strip_std_aus(); }");
+    fhem("defmod FL_BZStrip_nomotiontimer at +00:05:00 { set_state_bz_strip_std_aus() };");
+    1;
 }
 
 sub reset_bz_strip_nomotion_timer
 {
     fhem("delete FL_BZStrip_nomotiontimer");
+    1;
 }
 
 sub set_bz_strip_off
 {
     fhem("set BZ_Flexstrip off");
+    1;
 }
 
 # states
-our $status_bz_strip = $LICHT_STD_AUS;
 
 sub set_state_bz_strip_std_aus
 {
-    $status_bz_strip = $LICHT_STD_AUS;
+    $main::status_bz_strip = $main::LICHT_STD_AUS;
+    fhem("set teleBot message status_bz_strip: ".$main::status_bz_strip."");
     set_bz_strip_off();
+    1;
 }
 
 sub set_state_bz_strip_bew_an
-{
-    $status_bz_strip = $LICHT_BEW_AN;
-    if( $PRES_SCHLAF == $status_presence ) {
+{    
+    if( $main::PRES_SCHLAF eq $main::status_presence ) {
+        $main::status_bz_strip = $main::LICHT_BEW_AN;
+        fhem("set teleBot message status_bz_strip: ".$main::status_bz_strip."");
         set_bz_strip_night();
     } else {
+        # do not switch light during waketime
     }
+    1;
 }
 
 # starts timer to switch light off
 sub set_state_bz_strip_bew_aus
 {
-    $status_bz_strip = $LICHT_BEW_AUS;
+    $main::status_bz_strip = $main::LICHT_BEW_AUS;
+    fhem("set teleBot message status_bz_strip: ".$main::status_bz_strip."");
     set_bz_strip_nomotion_timer();
+    1;
 }
 
 
