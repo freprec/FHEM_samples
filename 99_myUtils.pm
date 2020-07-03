@@ -339,7 +339,7 @@ sub action_fl_motion_on
     # nothing
     # $main::LICHT_ZEIT_AN
     # nothing
-    # $main::LICHT_NACHT_AN
+    # $main::LICHT_NACHT
     # nothing
 
     # bz_strip
@@ -370,7 +370,7 @@ sub action_fl_motion_on
     # nothing
     # $main::LICHT_ZEIT_AN
     # nothing
-    # $main::LICHT_NACHT_AN
+    # $main::LICHT_NACHT
     # nothing
     1;
 }
@@ -378,8 +378,8 @@ sub action_fl_motion_on
 # TODO
 sub action_fl_motion_off
 {
-    if (     $main::LICHT_BEW_AN eq $main::status_fl_licht
-        || $main::LICHT_NACHT_AN eq $main::status_fl_licht)
+    if (  $main::LICHT_BEW_AN eq $main::status_fl_licht
+        || $main::LICHT_NACHT eq $main::status_fl_licht)
     {
         set_state_fl_bew_aus();
     }
@@ -395,8 +395,8 @@ sub action_fl_motion_off
     # $main::LICHT_ZEIT_AN
     # nothing
 
-    if (   $main::LICHT_BEW_AN eq $main::status_bz_strip
-        || $main::LICHT_NACHT_AN eq $main::status_bz_strip)
+    if (  $main::LICHT_BEW_AN eq $main::status_bz_strip
+        || $main::LICHT_NACHT eq $main::status_bz_strip)
     {
         set_state_bz_strip_bew_aus();
     }
@@ -416,7 +416,7 @@ sub action_fl_motion_off
 # TODO
 sub action_fl_timer_on
 {
-    if(     $main::LICHT_STD_AUS eq $main::status_fl_licht)
+    if ($main::LICHT_STD_AUS eq $main::status_fl_licht)
     {
         set_state_fl_bew_an();
     }
@@ -437,7 +437,7 @@ sub action_fl_timer_on
 # TODO
 sub action_fl_timer_off
 {
-    if(     $main::LICHT_STD_AUS eq $main::status_fl_licht )
+    if ($main::LICHT_STD_AUS eq $main::status_fl_licht)
     {
         set_state_fl_bew_an();
     }
