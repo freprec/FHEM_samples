@@ -90,8 +90,6 @@ sub set_state_presence_zuhause()
 {
     $main::status_presence = $main::PRES_ZUHAUSE;
     
-    fhem("set FL_Decke_RGB rgb 1DFF0D");
-    fhem("set FL_Decke_RGB blink 2 0.9");
     fhem("attr Abends_Flurlicht disable 1");
     fhem("attr Abends_Arbeitszimmerlicht disable 1");
     fhem("set teleBot message Anwesenheit: aktiviert");
@@ -110,8 +108,6 @@ sub set_state_presence_weg()
 {
     $main::status_presence = $main::PRES_WEG;
     
-    fhem("set FL_Decke_RGB rgb FF0808");
-    fhem("set FL_Decke_RGB blink 2 0.9");
     fhem("attr Abends_Flurlicht disable 0");
     fhem("attr Abends_Arbeitszimmerlicht disable 0");
     fhem("set teleBot message Anwesenheit: deaktiviert");
@@ -123,6 +119,10 @@ sub set_state_presence_urlaub()
 {
     $main::status_presence = $main::PRES_URLAUB;
     
+    fhem("attr Abends_Flurlicht disable 0");
+    fhem("attr Abends_Arbeitszimmerlicht disable 0");
+    fhem("set teleBot message Anwesenheit: deaktiviert");
+
     1;
 }
 
@@ -132,10 +132,14 @@ sub action_presence_switch()
     if (         $main::PRES_WEG eq $main::status_presence ||
               $main::PRES_SCHLAF eq $main::status_presence)
     {
+        fhem("set FL_Decke_RGB rgb 1DFF0D");
+        fhem("set FL_Decke_RGB blink 2 0.9");
         set_state_presence_zuhause();
     }
     elsif (  $main::PRES_ZUHAUSE eq $main::status_presence )
     {
+        fhem("set FL_Decke_RGB rgb FF0808");
+        fhem("set FL_Decke_RGB blink 2 0.9");
         set_state_presence_weg();
     }
     else{}
