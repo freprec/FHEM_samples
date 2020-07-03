@@ -378,7 +378,8 @@ sub action_fl_motion_on
 # TODO
 sub action_fl_motion_off
 {
-    if(     $main::LICHT_BEW_AN eq $main::status_fl_licht )
+    if (     $main::LICHT_BEW_AN eq $main::status_fl_licht
+        || $main::LICHT_NACHT_AN eq $main::status_fl_licht)
     {
         set_state_fl_bew_aus();
     }
@@ -394,10 +395,21 @@ sub action_fl_motion_off
     # $main::LICHT_ZEIT_AN
     # nothing
 
-    if(     $main::LICHT_BEW_AN eq $main::status_bz_strip )
+    if (   $main::LICHT_BEW_AN eq $main::status_bz_strip
+        || $main::LICHT_NACHT_AN eq $main::status_bz_strip)
     {
         set_state_bz_strip_bew_aus();
     }
+    # $main::LICHT_STD_AUS
+    # nothing
+    # $main::LICHT_MAN_AN
+    # nothing
+    # $main::LICHT_MAN_AUS
+    # nothing
+    # $main::LICHT_BEW_AUS
+    # nothing
+    # $main::LICHT_ZEIT_AN
+    # nothing
     1;
 }
 
