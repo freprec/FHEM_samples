@@ -33,6 +33,7 @@ myUtils_Initialize($$)
     our $LICHT_BEW_AN  =  'Licht_bew_an';     # ->LICHT_BEW_AUS, ->LICHT_MAN_AUS, ->LICHT_ZEIT_AN
     our $LICHT_BEW_AUS =  'Licht_bew_aus';    # ->LICHT_STD_AUS, ->LICHT_MAN_AUS, ->LICHT_ZEIT_AN
     our $LICHT_ZEIT_AN =  'Licht_zeit_an';    # ->LICHT_STD_AUS, ->LICHT_MAN_AUS
+    our $LICHT_NACHT   =  'Licht_nacht';      # ->LICHT_MAN_AN, ->LICHT_BEW_AUS
 
     our $simulated_bed_time;
     our $simulated_work_time;
@@ -238,12 +239,7 @@ sub set_state_fl_man_aus
 sub set_state_fl_bew_an
 {
     $main::status_fl_licht = $main::LICHT_BEW_AN;
-    fhem("set teleBot message status_fl_licht: ".$main::status_fl_licht."");
-    if( $main::PRES_SCHLAF eq $main::status_presence ) {
-        set_fl_decke_night();
-    } else {
-        set_fl_decke_on();
-    }
+    set_fl_decke_on();
     1;
 }
 
@@ -261,6 +257,13 @@ sub set_state_fl_zeit_an
     $main::status_fl_licht = $main::LICHT_ZEIT_AN;
     fhem("set teleBot message status_fl_licht: ".$main::status_fl_licht."");
     set_fl_decke_on();
+    1;
+}
+
+sub set_state_fl_nacht_an
+{
+    $main::status_fl_licht = $main::LICHT_NACHT;
+    set_fl_decke_night();
     1;
 }
 
@@ -286,7 +289,7 @@ sub action_fl_lightswitch
         # TODO set argument to afterwards go $main::LICHT_STD_AUS
         reset_fl_decke_nomotion_timer();
     }
-    else { # LICHT_STD_AUS & LICHT_MAN_AUS
+    else { # LICHT_STD_AUS, LICHT_MAN_AUS, LICHT_NACHT
         set_state_fl_man_an();
         # TODO set argument to afterwards go $main::LICHT_STD_AUS
     }
@@ -305,12 +308,27 @@ sub action_fl_motion_on
     # fl_licht
     if(     $main::LICHT_STD_AUS eq $main::status_fl_licht )
     {
-        set_state_fl_bew_an();
+        if ($main::PRES_SCHLAF eq $main::status_presence)
+        {
+            set_state_fl_nacht_an();
+        }
+        else
+        {
+            set_state_fl_bew_an();
+        }
     }
     elsif(  $main::LICHT_BEW_AUS eq $main::status_fl_licht)
     {
         reset_fl_decke_nomotion_timer();
-        set_state_fl_bew_an();
+        
+        if ($main::PRES_SCHLAF eq $main::status_presence)
+        {
+            set_state_fl_nacht_an();
+        }
+        else
+        {
+            set_state_fl_bew_an();
+        }
     }
     else { }
     # $main::LICHT_MAN_AN
@@ -321,18 +339,39 @@ sub action_fl_motion_on
     # nothing
     # $main::LICHT_ZEIT_AN
     # nothing
-    
+    # $main::LICHT_NACHT_AN
+    # nothing
+
     # bz_strip
     if(     $main::LICHT_STD_AUS eq $main::status_bz_strip )
     {
-        set_state_bz_strip_bew_an();
+        if ($main::PRES_SCHLAF eq $main::status_presence)
+        {
+            set_state_bz_strip_nacht_an();
+        }
+        else { }
     }
     elsif(  $main::LICHT_BEW_AUS eq $main::status_bz_strip)
     {
         reset_bz_strip_nomotion_timer();
-        set_state_bz_strip_bew_an();
+        
+        if ($main::PRES_SCHLAF eq $main::status_presence)
+        {
+            set_state_bz_strip_nacht_an();
+        }
+        else { }
     }
     else { }
+    # $main::LICHT_MAN_AN
+    # nothing
+    # $main::LICHT_MAN_AUS
+    # nothing
+    # $main::LICHT_BEW_AN
+    # nothing
+    # $main::LICHT_ZEIT_AN
+    # nothing
+    # $main::LICHT_NACHT_AN
+    # nothing
     1;
 }
 
@@ -409,6 +448,11 @@ sub action_fl_timer_off
 # BADEZIMMER
 
 # set bz_strip
+sub set_bz_strip_on
+{
+    fhem("set BZ_Flexstrip rgb FFFFFF");    #FFC698 - warm
+    1;
+}
 sub set_bz_strip_night
 {
     fhem("set BZ_Flexstrip rgb 1D0505");
@@ -443,15 +487,10 @@ sub set_state_bz_strip_std_aus
     1;
 }
 
-sub set_state_bz_strip_bew_an
+sub set_state_bz_strip_nacht_an
 {    
-    if( $main::PRES_SCHLAF eq $main::status_presence ) {
-        $main::status_bz_strip = $main::LICHT_BEW_AN;
-        fhem("set teleBot message status_bz_strip: ".$main::status_bz_strip."");
-        set_bz_strip_night();
-    } else {
-        # do not switch light during waketime
-    }
+    $main::status_bz_strip = $main::LICHT_NACHT;
+    set_bz_strip_night();
     1;
 }
 
