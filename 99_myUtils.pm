@@ -130,14 +130,14 @@ sub set_state_presence_urlaub()
 # actions presence
 sub action_presence_switch()
 {
-    if (         $main::PRES_WEG eq $main::status_presence ||
-              $main::PRES_SCHLAF eq $main::status_presence)
+    if (       $main::PRES_WEG eq $main::status_presence ||
+            $main::PRES_SCHLAF eq $main::status_presence)
     {
         fhem("set FL_Decke_RGB rgb 1DFF0D");
         fhem("set FL_Decke_RGB blink 2 0.9");
         set_state_presence_zuhause();
     }
-    elsif (  $main::PRES_ZUHAUSE eq $main::status_presence )
+    elsif ($main::PRES_ZUHAUSE eq $main::status_presence)
     {
         fhem("set FL_Decke_RGB rgb FF0808");
         fhem("set FL_Decke_RGB blink 2 0.9");
@@ -150,7 +150,7 @@ sub action_presence_switch()
 
 sub action_sleep_trigger()
 {
-    if (  $main::PRES_ZUHAUSE eq $main::status_presence )
+    if ($main::PRES_ZUHAUSE eq $main::status_presence)
     {
         set_state_presence_schlaf();
     }
@@ -161,7 +161,7 @@ sub action_sleep_trigger()
 
 sub action_wake_trigger()
 {
-    if (  $main::PRES_SCHLAF eq $main::status_presence )
+    if ($main::PRES_SCHLAF eq $main::status_presence)
     {
         set_state_presence_zuhause();
     }
@@ -273,17 +273,17 @@ sub set_state_fl_nacht_an
 sub action_fl_lightswitch
 {
     if(     $main::LICHT_MAN_AN eq $main::status_fl_licht ||
-            $main::LICHT_BEW_AN eq $main::status_fl_licht )
+            $main::LICHT_BEW_AN eq $main::status_fl_licht)
     {
         set_state_fl_man_aus();
         # TODO set argument to afterwards go $main::LICHT_STD_AUS
     }
-    elsif(  $main::LICHT_ZEIT_AN eq $main::status_fl_licht )
+    elsif(  $main::LICHT_ZEIT_AN eq $main::status_fl_licht)
     {
         set_state_fl_man_aus();
         # TODO set argument to afterwards go $main::LICHT_ZEIT_AN
     }
-    elsif(  $main::LICHT_BEW_AUS eq $main::status_fl_licht )
+    elsif(  $main::LICHT_BEW_AUS eq $main::status_fl_licht)
     {
         set_state_fl_man_aus();
         # TODO set argument to afterwards go $main::LICHT_STD_AUS
@@ -306,7 +306,7 @@ sub action_fl_motion_on
     }
 
     # fl_licht
-    if(     $main::LICHT_STD_AUS eq $main::status_fl_licht )
+    if(     $main::LICHT_STD_AUS eq $main::status_fl_licht)
     {
         if ($main::PRES_SCHLAF eq $main::status_presence)
         {
@@ -343,7 +343,7 @@ sub action_fl_motion_on
     # nothing
 
     # bz_strip
-    if(     $main::LICHT_STD_AUS eq $main::status_bz_strip )
+    if ($main::LICHT_STD_AUS eq $main::status_bz_strip)
     {
         if ($main::PRES_SCHLAF eq $main::status_presence)
         {
@@ -351,7 +351,7 @@ sub action_fl_motion_on
         }
         else { }
     }
-    elsif(  $main::LICHT_BEW_AUS eq $main::status_bz_strip)
+    elsif ($main::LICHT_BEW_AUS eq $main::status_bz_strip)
     {
         reset_bz_strip_nomotion_timer();
         
@@ -416,7 +416,7 @@ sub action_fl_motion_off
 # TODO
 sub action_fl_timer_on
 {
-    if(     $main::LICHT_STD_AUS eq $main::status_fl_licht )
+    if(     $main::LICHT_STD_AUS eq $main::status_fl_licht)
     {
         set_state_fl_bew_an();
     }
