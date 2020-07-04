@@ -458,7 +458,7 @@ sub action_fl_timer_off
 # set bz_strip
 sub set_bz_strip_on
 {
-    fhem("set BZ_Flexstrip rgb FFFFFF");    #FFC698 - warm
+    fhem("set BZ_Flexstrip ct 270");    #rgb FFDEC3 - ?
     1;
 }
 sub set_bz_strip_night
@@ -485,7 +485,24 @@ sub set_bz_strip_off
     1;
 }
 
-# states
+# set bz_strip states
+sub set_state_bz_strip_man_an
+{
+    $main::status_bz_strip = $main::LICHT_MAN_AN;
+    reset_bz_strip_nomotion_timer();
+    set_bz_strip_on();
+    1;
+}
+
+sub set_state_bz_strip_man_aus
+{
+    set_state_bz_strip_std_aus();
+    #$main::status_bz_strip = $main::LICHT_MAN_AUS;
+    #reset_bz_strip_nomotion_timer();
+    #set_bz_strip_off();
+    1;
+}
+
 
 sub set_state_bz_strip_std_aus
 {
@@ -511,5 +528,51 @@ sub set_state_bz_strip_bew_aus
     1;
 }
 
+# actions BZ_Dimmschalter
+sub action_bz_switch
+{
+    # bz_strip
+    if (   $main::LICHT_STD_AUS eq $main::status_bz_strip
+        || $main::LICHT_MAN_AUS eq $main::status_bz_strip)
+    {
+        set_state_bz_strip_man_an();
+    }
+    elsif (  $main::LICHT_NACHT eq $main::status_bz_strip
+        ||  $main::LICHT_MAN_AN eq $main::status_bz_strip
+        ||  $main::LICHT_BEW_AN eq $main::status_bz_strip
+        || $main::LICHT_BEW_AUS eq $main::status_bz_strip)
+    {
+        set_state_bz_strip_man_aus();
+    }
+    elsif( $main::LICHT_ZEIT_AN eq $main::status_bz_strip)
+    {
+        set_state_bz_strip_man_aus();
+        # TODO set argument to afterwards go $main::LICHT_ZEIT_AN
+    }
+    else { }
+
+    1;
+}
+
+sub action_bz_dimup
+{
+    fhem("set BZ_Flexstrip dimUp");
+    1;
+}
+sub action_bz_dimdown
+{
+    fhem("set BZ_Flexstrip dimDown");
+    1;
+} 
+sub action_bz_left
+{
+    fhem("set BZ_Flexstrip ctDown");
+    1;
+}
+sub action_bz_right
+{
+    fhem("set BZ_Flexstrip ctUp");
+    1;
+}
 
 1;
