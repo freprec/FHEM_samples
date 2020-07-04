@@ -40,6 +40,15 @@ myUtils_Initialize($$)
 
     our $status_bz_strip = $LICHT_STD_AUS;
     our $status_fl_licht = $LICHT_STD_AUS;
+
+    our $ct_max = 500;
+    our $ct_min = 154;
+
+    our $pct_max = 100;
+    our $pct_min = 5;
+
+    our $bz_strip_ct = 270;
+    our $bz_strip_pct = 100;
 }
 
 # Enter you functions below _this_ line.
@@ -458,7 +467,8 @@ sub action_fl_timer_off
 # set bz_strip
 sub set_bz_strip_on
 {
-    fhem("set BZ_Flexstrip ct 270");    #rgb FFDEC3 - ?
+    fhem("set BZ_Flexstrip pct ".$main::bz_strip_pct);
+    fhem("set BZ_Flexstrip ct ".$main::bz_strip_ct);
     1;
 }
 sub set_bz_strip_night
@@ -556,22 +566,42 @@ sub action_bz_switch
 
 sub action_bz_dimup
 {
-    fhem("set BZ_Flexstrip dimUp");
+    $main::bz_strip_pct = $main::bz_strip_pct + 15;
+    if ($main::pct_max < $main::bz_strip_pct)
+    {
+        $main::bz_strip_pct = $main::pct_max;
+    }
+    set_state_bz_strip_man_an();
     1;
 }
 sub action_bz_dimdown
 {
-    fhem("set BZ_Flexstrip dimDown");
+    $main::bz_strip_pct = $main::bz_strip_pct - 15;
+    if ($main::pct_min > $main::bz_strip_pct)
+    {
+        $main::bz_strip_pct = $main::pct_min;
+    }
+    set_state_bz_strip_man_an();
     1;
 } 
 sub action_bz_left
 {
-    fhem("set BZ_Flexstrip ctDown");
+    $main::bz_strip_ct = $main::bz_strip_ct - 30;
+    if ($main::ct_min > $main::bz_strip_ct)
+    {
+        $main::bz_strip_ct = $main::ct_min;
+    }
+    set_state_bz_strip_man_an();
     1;
 }
 sub action_bz_right
 {
-    fhem("set BZ_Flexstrip ctUp");
+    $main::bz_strip_ct = $main::bz_strip_ct + 30;
+    if ($main::ct_max < $main::bz_strip_ct)
+    {
+        $main::bz_strip_ct = $main::ct_max;
+    }
+    set_state_bz_strip_man_an();
     1;
 }
 
