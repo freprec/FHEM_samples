@@ -208,6 +208,7 @@ sub reset_fl_decke_nomotion_timer
 sub set_state_fl_std_aus
 {
     $main::status_fl_licht = $main::LICHT_STD_AUS;
+    reset_fl_decke_nomotion_timer();
     set_fl_decke_off();
     1;
 }
@@ -215,6 +216,7 @@ sub set_state_fl_std_aus
 sub set_state_fl_man_an
 {
     $main::status_fl_licht = $main::LICHT_MAN_AN;
+    reset_fl_decke_nomotion_timer();
     set_fl_decke_on();
     # TODO set a man_on timer to go to argument function
     #https://stackoverflow.com/questions/1234640/passing-a-function-object-and-calling-it
@@ -226,6 +228,7 @@ sub set_state_fl_man_aus
 {
     set_state_fl_std_aus(); # until below TODO is implemented
     #$main::status_fl_licht = $main::LICHT_MAN_AUS;
+    reset_fl_decke_nomotion_timer();
     set_fl_decke_off();
     # TODO set a man_off timer to go to argument function
     #https://stackoverflow.com/questions/1234640/passing-a-function-object-and-calling-it
@@ -236,6 +239,7 @@ sub set_state_fl_man_aus
 sub set_state_fl_bew_an
 {
     $main::status_fl_licht = $main::LICHT_BEW_AN;
+    reset_fl_decke_nomotion_timer();
     set_fl_decke_on();
     1;
 }
@@ -258,6 +262,7 @@ sub set_state_fl_zeit_an
 sub set_state_fl_nacht_an
 {
     $main::status_fl_licht = $main::LICHT_NACHT;
+    reset_fl_decke_nomotion_timer();
     set_fl_decke_night();
     1;
 }
@@ -282,7 +287,7 @@ sub action_fl_lightswitch
     {
         set_state_fl_man_aus();
         # TODO set argument to afterwards go $main::LICHT_STD_AUS
-        reset_fl_decke_nomotion_timer();
+        
     }
     else { # LICHT_STD_AUS, LICHT_MAN_AUS, LICHT_NACHT
         set_state_fl_man_an();
@@ -314,8 +319,6 @@ sub action_fl_motion_on
     }
     elsif(  $main::LICHT_BEW_AUS eq $main::status_fl_licht)
     {
-        reset_fl_decke_nomotion_timer();
-        
         if ($main::PRES_SCHLAF eq $main::status_presence)
         {
             set_state_fl_nacht_an();
@@ -348,8 +351,6 @@ sub action_fl_motion_on
     }
     elsif ($main::LICHT_BEW_AUS eq $main::status_bz_strip)
     {
-        reset_bz_strip_nomotion_timer();
-        
         if ($main::PRES_SCHLAF eq $main::status_presence)
         {
             set_state_bz_strip_nacht_an();
@@ -489,6 +490,7 @@ sub set_bz_strip_off
 sub set_state_bz_strip_std_aus
 {
     $main::status_bz_strip = $main::LICHT_STD_AUS;
+    reset_bz_strip_nomotion_timer();
     set_bz_strip_off();
     1;
 }
@@ -496,6 +498,7 @@ sub set_state_bz_strip_std_aus
 sub set_state_bz_strip_nacht_an
 {    
     $main::status_bz_strip = $main::LICHT_NACHT;
+    reset_bz_strip_nomotion_timer();
     set_bz_strip_night();
     1;
 }
