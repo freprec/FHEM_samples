@@ -208,7 +208,6 @@ sub reset_fl_decke_nomotion_timer
 sub set_state_fl_std_aus
 {
     $main::status_fl_licht = $main::LICHT_STD_AUS;
-    fhem("set teleBot message status_fl_licht: ".$main::status_fl_licht."");
     set_fl_decke_off();
     1;
 }
@@ -216,7 +215,6 @@ sub set_state_fl_std_aus
 sub set_state_fl_man_an
 {
     $main::status_fl_licht = $main::LICHT_MAN_AN;
-    fhem("set teleBot message status_fl_licht: ".$main::status_fl_licht."");
     set_fl_decke_on();
     # TODO set a man_on timer to go to argument function
     #https://stackoverflow.com/questions/1234640/passing-a-function-object-and-calling-it
@@ -228,7 +226,6 @@ sub set_state_fl_man_aus
 {
     set_state_fl_std_aus(); # until below TODO is implemented
     #$main::status_fl_licht = $main::LICHT_MAN_AUS;
-    fhem("set teleBot message status_fl_licht: ".$main::status_fl_licht."");
     set_fl_decke_off();
     # TODO set a man_off timer to go to argument function
     #https://stackoverflow.com/questions/1234640/passing-a-function-object-and-calling-it
@@ -247,7 +244,6 @@ sub set_state_fl_bew_an
 sub set_state_fl_bew_aus
 {
     $main::status_fl_licht = $main::LICHT_BEW_AUS;
-    fhem("set teleBot message status_fl_licht: ".$main::status_fl_licht."");
     set_fl_decke_nomotion_timer();
     1;
 }
@@ -255,7 +251,6 @@ sub set_state_fl_bew_aus
 sub set_state_fl_zeit_an
 {
     $main::status_fl_licht = $main::LICHT_ZEIT_AN;
-    fhem("set teleBot message status_fl_licht: ".$main::status_fl_licht."");
     set_fl_decke_on();
     1;
 }
@@ -494,7 +489,6 @@ sub set_bz_strip_off
 sub set_state_bz_strip_std_aus
 {
     $main::status_bz_strip = $main::LICHT_STD_AUS;
-    fhem("set teleBot message status_bz_strip: ".$main::status_bz_strip."");
     set_bz_strip_off();
     1;
 }
@@ -510,7 +504,6 @@ sub set_state_bz_strip_nacht_an
 sub set_state_bz_strip_bew_aus
 {
     $main::status_bz_strip = $main::LICHT_BEW_AUS;
-    fhem("set teleBot message status_bz_strip: ".$main::status_bz_strip."");
     set_bz_strip_nomotion_timer();
     1;
 }
