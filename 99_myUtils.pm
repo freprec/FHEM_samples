@@ -13,6 +13,8 @@ package main;
 use strict;
 use warnings;
 use POSIX;
+use feature "switch";
+#use Switch;
 
 sub
 myUtils_Initialize($$)
@@ -43,12 +45,20 @@ myUtils_Initialize($$)
 
     our $ct_max = 500;
     our $ct_min = 154;
+    our $ct_step = 30;
 
     our $pct_max = 100;
     our $pct_min = 5;
+    our $dimming_step_pct = 15;
 
     our $bz_strip_ct = 270;
     our $bz_strip_pct = 100;
+    our $bz_strip_night_timer = '00:05:00';
+    our $fl_decke_nomotion_timer = '00:00:20';
+
+    our $night_rgb = '1D0505';  # night light - dark red
+    our $indicator_button_home_rgb = '1DFF0D';  # presence confirmation light - green
+    our $indicator_button_away_rgb = 'FF0808';  # presence confirmation light - red
 }
 
 # Enter you functions below _this_ line.
@@ -142,15 +152,13 @@ sub action_presence_switch()
     if (       $main::PRES_WEG eq $main::status_presence ||
             $main::PRES_SCHLAF eq $main::status_presence)
     {
-        fhem("set FL_Decke_RGB rgb 1DFF0D");
-        fhem("set FL_Decke_RGB blink 2 0.9");
         set_state_presence_zuhause();
+        fhem("sleep 1.8; set FL_Decke_RGB rgb ".$main::indicator_button_home_rgb."; set FL_Decke_RGB pct 100; sleep 2.7; { reset_state_fl_current() }");
     }
     elsif ($main::PRES_ZUHAUSE eq $main::status_presence)
     {
-        fhem("set FL_Decke_RGB rgb FF0808");
-        fhem("set FL_Decke_RGB blink 2 0.9");
         set_state_presence_weg();
+        fhem("sleep 1.8; set FL_Decke_RGB rgb ".$main::indicator_button_away_rgb."; set FL_Decke_RGB pct 100; sleep 2.7; { set_state_fl_std_aus() }");
     }
     else{}
 
@@ -191,7 +199,7 @@ sub set_fl_decke_on
 
 sub set_fl_decke_night
 {
-    fhem("set FL_Decke_RGB rgb 1D0505");
+    fhem("set FL_Decke_RGB rgb ".$main::night_rgb);
     1;
 }
 
@@ -201,15 +209,20 @@ sub set_fl_decke_off
     1;
 }
 
+# start the timer to switch the light off
 sub set_fl_decke_nomotion_timer
 {
-    fhem("defmod FL_nomotiontimer at +00:00:20 { set_state_fl_std_aus() };");
+    fhem("defmod FL_nomotiontimer at +".$main::fl_decke_nomotion_timer." { set_state_fl_std_aus() };");
     1;
 }
 
+# delete the timer to switch the light off
 sub reset_fl_decke_nomotion_timer
 {
-    fhem("delete FL_nomotiontimer");
+    if (Value('FL_nomotiontimer') ne '')
+    {
+        fhem("delete FL_nomotiontimer");
+    }
     1;
 }
 
@@ -237,8 +250,8 @@ sub set_state_fl_man_aus
 {
     set_state_fl_std_aus(); # until below TODO is implemented
     #$main::status_fl_licht = $main::LICHT_MAN_AUS;
-    reset_fl_decke_nomotion_timer();
-    set_fl_decke_off();
+    #reset_fl_decke_nomotion_timer();
+    #set_fl_decke_off();
     # TODO set a man_off timer to go to argument function
     #https://stackoverflow.com/questions/1234640/passing-a-function-object-and-calling-it
     # This shall save the manual setting for a time until it returns to the state which is provided by the argument.
@@ -253,7 +266,6 @@ sub set_state_fl_bew_an
     1;
 }
 
-# starts timer to switch light off
 sub set_state_fl_bew_aus
 {
     $main::status_fl_licht = $main::LICHT_BEW_AUS;
@@ -276,23 +288,39 @@ sub set_state_fl_nacht_an
     1;
 }
 
+# reset the current state
+sub reset_state_fl_current
+{
+    given ($main::status_fl_licht)
+    {
+        when ($main::LICHT_STD_AUS) { set_state_fl_std_aus(); }
+        when ($main::LICHT_MAN_AUS) { set_state_fl_man_aus(); }
+        when ($main::LICHT_MAN_AN) { set_state_fl_man_an(); }
+        when ($main::LICHT_BEW_AN) { set_state_fl_bew_an(); }
+        when ($main::LICHT_BEW_AUS) { set_state_fl_bew_aus(); }
+        when ($main::LICHT_ZEIT_AN) { set_state_fl_zeit_an(); }
+        when ($main::LICHT_NACHT) { set_state_fl_nacht_an(); }
+        default {}
+    }
+}
+
 # Actions
 
 # Lichtschalter betätigt
 sub action_fl_lightswitch
 {
-    if(     $main::LICHT_MAN_AN eq $main::status_fl_licht ||
+    if (    $main::LICHT_MAN_AN eq $main::status_fl_licht ||
             $main::LICHT_BEW_AN eq $main::status_fl_licht)
     {
         set_state_fl_man_aus();
         # TODO set argument to afterwards go $main::LICHT_STD_AUS
     }
-    elsif(  $main::LICHT_ZEIT_AN eq $main::status_fl_licht)
+    elsif ($main::LICHT_ZEIT_AN eq $main::status_fl_licht)
     {
         set_state_fl_man_aus();
         # TODO set argument to afterwards go $main::LICHT_ZEIT_AN
     }
-    elsif(  $main::LICHT_BEW_AUS eq $main::status_fl_licht)
+    elsif ($main::LICHT_BEW_AUS eq $main::status_fl_licht)
     {
         set_state_fl_man_aus();
         # TODO set argument to afterwards go $main::LICHT_STD_AUS
@@ -315,7 +343,7 @@ sub action_fl_motion_on
     }
 
     # fl_licht
-    if(     $main::LICHT_STD_AUS eq $main::status_fl_licht)
+    if ($main::LICHT_STD_AUS eq $main::status_fl_licht)
     {
         if ($main::PRES_SCHLAF eq $main::status_presence)
         {
@@ -326,7 +354,7 @@ sub action_fl_motion_on
             set_state_fl_bew_an();
         }
     }
-    elsif(  $main::LICHT_BEW_AUS eq $main::status_fl_licht)
+    elsif ($main::LICHT_BEW_AUS eq $main::status_fl_licht)
     {
         if ($main::PRES_SCHLAF eq $main::status_presence)
         {
@@ -471,21 +499,27 @@ sub set_bz_strip_on
     fhem("set BZ_Flexstrip ct ".$main::bz_strip_ct);
     1;
 }
+
 sub set_bz_strip_night
 {
-    fhem("set BZ_Flexstrip rgb 1D0505");
+    fhem("set BZ_Flexstrip rgb ".$main::night_rgb);
     1;
 }
 
+# start the timer to switch the light off
 sub set_bz_strip_nomotion_timer
 {
-    fhem("defmod FL_BZStrip_nomotiontimer at +00:05:00 { set_state_bz_strip_std_aus() };");
+    fhem("defmod FL_BZStrip_nomotiontimer at +".$main::bz_strip_night_timer." { set_state_bz_strip_std_aus() };");
     1;
 }
 
+# delete the timer to switch the light off
 sub reset_bz_strip_nomotion_timer
 {
-    fhem("delete FL_BZStrip_nomotiontimer");
+    if (Value('FL_BZStrip_nomotiontimer') ne '')
+    {
+        fhem("delete FL_BZStrip_nomotiontimer");
+    }
     1;
 }
 
@@ -513,7 +547,6 @@ sub set_state_bz_strip_man_aus
     1;
 }
 
-
 sub set_state_bz_strip_std_aus
 {
     $main::status_bz_strip = $main::LICHT_STD_AUS;
@@ -530,7 +563,6 @@ sub set_state_bz_strip_nacht_an
     1;
 }
 
-# starts timer to switch light off
 sub set_state_bz_strip_bew_aus
 {
     $main::status_bz_strip = $main::LICHT_BEW_AUS;
@@ -566,7 +598,7 @@ sub action_bz_switch
 
 sub action_bz_dimup
 {
-    $main::bz_strip_pct = $main::bz_strip_pct + 15;
+    $main::bz_strip_pct = $main::bz_strip_pct + $main::dimming_step_pct;
     if ($main::pct_max < $main::bz_strip_pct)
     {
         $main::bz_strip_pct = $main::pct_max;
@@ -576,7 +608,7 @@ sub action_bz_dimup
 }
 sub action_bz_dimdown
 {
-    $main::bz_strip_pct = $main::bz_strip_pct - 15;
+    $main::bz_strip_pct = $main::bz_strip_pct - $main::dimming_step_pct;
     if ($main::pct_min > $main::bz_strip_pct)
     {
         $main::bz_strip_pct = $main::pct_min;
@@ -586,7 +618,7 @@ sub action_bz_dimdown
 } 
 sub action_bz_left
 {
-    $main::bz_strip_ct = $main::bz_strip_ct - 30;
+    $main::bz_strip_ct = $main::bz_strip_ct - $main::ct_step;
     if ($main::ct_min > $main::bz_strip_ct)
     {
         $main::bz_strip_ct = $main::ct_min;
@@ -596,7 +628,7 @@ sub action_bz_left
 }
 sub action_bz_right
 {
-    $main::bz_strip_ct = $main::bz_strip_ct + 30;
+    $main::bz_strip_ct = $main::bz_strip_ct + $main::ct_step;
     if ($main::ct_max < $main::bz_strip_ct)
     {
         $main::bz_strip_ct = $main::ct_max;
