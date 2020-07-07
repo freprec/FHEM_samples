@@ -45,11 +45,12 @@ myUtils_Initialize($$)
 
     our $ct_max = 500;
     our $ct_min = 154;
-    our $ct_step = 30;
+    our $ct_step = 40;
 
     our $pct_max = 100;
-    our $pct_min = 5;
-    our $dimming_step_pct = 15;
+    our $pct_min = 3;
+    our $dimming_step_up_pct = 22;
+    our $dimming_step_down_pct = 19;
 
     our $bz_strip_ct = 270;
     our $bz_strip_pct = 100;
@@ -598,41 +599,69 @@ sub action_bz_switch
 
 sub action_bz_dimup
 {
-    $main::bz_strip_pct = $main::bz_strip_pct + $main::dimming_step_pct;
-    if ($main::pct_max < $main::bz_strip_pct)
+    $main::bz_strip_pct = $main::bz_strip_pct + $main::dimming_step_up_pct;
+
+    # if maximum was already set, go to minimum
+    if ($main::pct_max + $main::dimming_step_up_pct == $main::bz_strip_pct)
+    {
+        $main::bz_strip_pct = $main::pct_min;
+    }
+    elsif ($main::pct_max < $main::bz_strip_pct)
     {
         $main::bz_strip_pct = $main::pct_max;
     }
+
     set_state_bz_strip_man_an();
     1;
 }
 sub action_bz_dimdown
 {
-    $main::bz_strip_pct = $main::bz_strip_pct - $main::dimming_step_pct;
-    if ($main::pct_min > $main::bz_strip_pct)
+    $main::bz_strip_pct = $main::bz_strip_pct - $main::dimming_step_down_pct;
+
+    # if minimum was already set, go to maximum
+    if ($main::pct_min - $main::dimming_step_down_pct == $main::bz_strip_pct)
+    {
+        $main::bz_strip_pct = $main::pct_max;
+    }
+    elsif ($main::pct_min > $main::bz_strip_pct)
     {
         $main::bz_strip_pct = $main::pct_min;
     }
+
     set_state_bz_strip_man_an();
     1;
 } 
 sub action_bz_left
 {
     $main::bz_strip_ct = $main::bz_strip_ct - $main::ct_step;
-    if ($main::ct_min > $main::bz_strip_ct)
+
+    # if maximum was already set, go to minimum
+    if ($main::ct_min - $main::ct_step == $main::bz_strip_ct)
+    {
+        $main::bz_strip_ct = $main::ct_max;
+    }
+    elsif ($main::ct_min > $main::bz_strip_ct)
     {
         $main::bz_strip_ct = $main::ct_min;
     }
+
     set_state_bz_strip_man_an();
     1;
 }
 sub action_bz_right
 {
     $main::bz_strip_ct = $main::bz_strip_ct + $main::ct_step;
-    if ($main::ct_max < $main::bz_strip_ct)
+
+    # if minimum was already set, go to maximum
+    if ($main::ct_max + $main::ct_step == $main::bz_strip_ct)
+    {
+        $main::bz_strip_ct = $main::ct_min;
+    }
+    elsif ($main::ct_max < $main::bz_strip_ct)
     {
         $main::bz_strip_ct = $main::ct_max;
     }
+
     set_state_bz_strip_man_an();
     1;
 }
